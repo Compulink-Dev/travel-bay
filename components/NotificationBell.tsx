@@ -21,6 +21,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { useSocket } from "@/context/SocketContext";
 
 interface Notification {
   _id: string;
@@ -40,6 +41,7 @@ interface Notification {
 
 export function NotificationBell() {
   const { user } = useUser();
+  const { socket, isConnected } = useSocket();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<Notification | null>(
@@ -54,6 +56,38 @@ export function NotificationBell() {
       fetchNotifications();
     }
   }, [user]);
+
+  // Listen for real-time notifications
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    const handleNewNotification = (notification: Notification) => {
+      setNotifications((prev) => [notification, ...prev]);
+      // Show toast for new notifications
+      if (notification.type === "edit_approved") {
+        toast.success("You can now edit the booking");
+      } else if (notification.type === "edit_rejected") {
+        toast.error("Edit request was declined");
+      }
+    };
+
+    const handleEditPermissionGranted = (data: {
+      bookingId: string;
+      notification: Notification;
+    }) => {
+      setNotifications((prev) => [data.notification, ...prev]);
+      // Refresh bookings to get updated permissions
+      window.dispatchEvent(new Event("bookingsUpdated"));
+    };
+
+    socket.on("new-notification", handleNewNotification);
+    socket.on("edit-permission-granted", handleEditPermissionGranted);
+
+    return () => {
+      socket.off("new-notification", handleNewNotification);
+      socket.off("edit-permission-granted", handleEditPermissionGranted);
+    };
+  }, [socket, user]);
 
   const fetchNotifications = async () => {
     try {
@@ -133,7 +167,7 @@ export function NotificationBell() {
         toast.error(error.error || "Failed to approve request");
       }
     } catch (error) {
-      console.log("Failed to approve request :", error);
+      console.log("Failed to approve request : ", error);
       toast.error("Failed to approve request");
     } finally {
       setIsLoading(false);
@@ -165,7 +199,7 @@ export function NotificationBell() {
         toast.error(error.error || "Failed to decline request");
       }
     } catch (error) {
-      console.log("Failed to decline request :", error);
+      console.log("Failed to decline request : ", error);
       toast.error("Failed to decline request");
     } finally {
       setIsLoading(false);
@@ -186,7 +220,6 @@ export function NotificationBell() {
     }
   };
 
-  // Simplify notification display
   const getDisplayMessage = (notification: Notification) => {
     switch (notification.type) {
       case "edit_request":
@@ -213,10 +246,6 @@ export function NotificationBell() {
     }
   };
 
-  // const editRequests = notifications.filter(
-  //   (n) => n.type === "edit_request" && !n.isRead
-  // );
-
   return (
     <>
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
@@ -231,21 +260,32 @@ export function NotificationBell() {
                 {unreadCount}
               </Badge>
             )}
+            {isConnected && (
+              <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-green-500 rounded-full" />
+            )}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-80">
           <div className="flex items-center justify-between p-2">
             <h4 className="text-sm font-semibold">Notifications</h4>
-            {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={markAllAsRead}
-                className="text-xs h-auto p-1"
-              >
-                Mark all read
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {isConnected && (
+                <div
+                  className="w-2 h-2 bg-green-500 rounded-full"
+                  title="Connected"
+                />
+              )}
+              {unreadCount > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={markAllAsRead}
+                  className="text-xs h-auto p-1"
+                >
+                  Mark all read
+                </Button>
+              )}
+            </div>
           </div>
           <DropdownMenuSeparator />
 
@@ -341,7 +381,7 @@ export function NotificationBell() {
                 )}
               </div>
 
-              <DialogFooter className="gap-2 sm:gap-0 flex flex-col">
+              <DialogFooter className="gap-2 sm:gap-0">
                 <Button
                   variant="outline"
                   onClick={handleRejectRequest}

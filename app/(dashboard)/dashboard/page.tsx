@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAuth, useUser } from "@clerk/nextjs";
 import { useBookingStore } from "@/store/booking-store";
 import { BookingForm } from "@/components/BookingForm";
@@ -21,39 +21,77 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { useSocket } from "@/context/SocketContext";
+import { toast } from "sonner";
+
+interface Booking {
+  _id: string;
+  userId: string;
+  approvedEditors?: string[];
+  creatorName?: string;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  type: "hotel" | "flight" | "package";
+  hotelName?: string;
+  flightNumber?: string;
+  packageName?: string;
+  travelDate?: Date;
+  destinations?: string[];
+  hotelOrResort?: string;
+  numberOfClients?: number;
+  checkIn?: Date;
+  checkOut?: Date;
+  flightDate?: Date;
+  guests: {
+    adults: number;
+    children: number;
+    childrenAges?: number[];
+  };
+  rooms?: number;
+  activities?: string[];
+  otherServices?: string;
+  costs?: number;
+  totalAmount: number;
+  amountPaid?: number;
+  datePaid?: Date;
+  paymentMethod?: string;
+  balance?: number;
+  paymentDueDate?: Date;
+  status: "pending" | "confirmed" | "cancelled" | "completed";
+  paymentStatus: "pending" | "paid" | "refunded" | "failed";
+  documents?: {
+    name: string;
+    url: string;
+    type?: string;
+    sizeBytes?: number;
+  }[];
+  notes?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export default function Dashboard() {
   const { user, isLoaded } = useUser();
+  const { socket, isConnected } = useSocket();
   const { getToken } = useAuth();
-  const { bookings, setBookings, isLoading, setLoading } = useBookingStore();
+  const {
+    bookings,
+    setBookings,
+    isLoading,
+    setLoading,
+    addBooking,
+    updateBooking,
+    deleteBooking,
+  } = useBookingStore();
   const [showForm, setShowForm] = useState(false);
 
-  useEffect(() => {
-    if (isLoaded) {
-      fetchBookings();
-    }
-  }, [isLoaded]);
-
-  useEffect(() => {
-    const handleBookingsUpdate = () => {
-      fetchBookings();
-    };
-
-    window.addEventListener("bookingsUpdated", handleBookingsUpdate);
-
-    return () => {
-      window.removeEventListener("bookingsUpdated", handleBookingsUpdate);
-    };
-  }, []);
-
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     setLoading(true);
     try {
       const token = await getToken();
       const response = await fetch("/api/bookings", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { Authorization: `Bearer ${token}` },
       });
 
       if (response.ok) {
@@ -69,7 +107,56 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [getToken, setBookings, setLoading]);
+
+  useEffect(() => {
+    if (isLoaded) {
+      fetchBookings();
+    }
+  }, [isLoaded, fetchBookings]);
+
+  // Listen for real-time booking updates
+  useEffect(() => {
+    if (!socket || !user) return;
+
+    const handleBookingCreated = (booking: Booking) => {
+      addBooking(booking);
+      toast.success("New booking created");
+    };
+
+    const handleBookingUpdated = (booking: Booking) => {
+      updateBooking(booking._id, booking);
+      toast.info("Booking updated");
+    };
+
+    const handleBookingDeleted = (bookingId: string) => {
+      deleteBooking(bookingId);
+      toast.warning("Booking deleted");
+    };
+
+    socket.on("booking-created", handleBookingCreated);
+    socket.on("booking-updated", handleBookingUpdated);
+    socket.on("booking-deleted", handleBookingDeleted);
+
+    return () => {
+      socket.off("booking-created", handleBookingCreated);
+      socket.off("booking-updated", handleBookingUpdated);
+      socket.off("booking-deleted", handleBookingDeleted);
+    };
+  }, [socket, user, addBooking, updateBooking, deleteBooking]);
+
+  // Add this effect to listen for booking updates from other components
+  useEffect(() => {
+    const handleBookingsUpdate = () => {
+      fetchBookings();
+    };
+
+    window.addEventListener("bookingsUpdated", handleBookingsUpdate);
+
+    return () => {
+      window.removeEventListener("bookingsUpdated", handleBookingsUpdate);
+    };
+  }, [fetchBookings]);
 
   const stats = {
     total: bookings.length,
@@ -92,21 +179,37 @@ export default function Dashboard() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <div>
+        <div className="flex items-center gap-2">
           <h1 className="text-3xl font-bold">Travel Bay Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back, {user?.firstName || user?.username}!
-          </p>
+          {isConnected ? (
+            <div
+              className="w-3 h-3 bg-green-500 rounded-full"
+              title="Real-time connected"
+            />
+          ) : (
+            <div
+              className="w-3 h-3 bg-yellow-500 rounded-full"
+              title="Real-time disconnected"
+            />
+          )}
         </div>
+        <p className="text-muted-foreground">
+          Welcome back, {user?.firstName || user?.username}!
+        </p>
         <Dialog>
           <DialogTrigger asChild>
             <Button>New Booking</Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>New Booking</DialogTitle>
+              <DialogTitle>Create New Booking</DialogTitle>
             </DialogHeader>
-            <BookingForm onSuccess={() => {}} />
+            <BookingForm
+              onSuccess={() => {
+                fetchBookings();
+                toast.success("Booking created successfully");
+              }}
+            />
           </DialogContent>
         </Dialog>
       </div>
@@ -120,7 +223,13 @@ export default function Dashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <BookingForm onSuccess={() => setShowForm(false)} />
+            <BookingForm
+              onSuccess={() => {
+                setShowForm(false);
+                fetchBookings();
+                toast.success("Booking created successfully");
+              }}
+            />
           </CardContent>
         </Card>
       ) : (

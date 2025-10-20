@@ -3,6 +3,7 @@ import { currentUser, clerkClient } from '@clerk/nextjs/server';
 import connectDB from '@/lib/database';
 import Booking from '@/models/Booking';
 import BookingActivity from '@/models/BookingActivity';
+import { getSocketIO } from '@/lib/socket';
 
 export async function GET(request: NextRequest) {
   try {
@@ -87,6 +88,15 @@ export async function POST(request: NextRequest) {
     });
 
     await BookingActivity.create({ bookingId: booking._id, userId: user.id, action: 'create', details: { body } });
+
+    // Emit socket event for new booking
+    try {
+      const io = getSocketIO();
+      io.emit('booking-created', booking);
+      io.to(`user:${user.id}`).emit('booking-created', booking);
+    } catch (socketError) {
+      console.log('Socket.IO not available, continuing without real-time update : ', socketError);
+    }
 
     return NextResponse.json(booking, { status: 201 });
   } catch (error) {

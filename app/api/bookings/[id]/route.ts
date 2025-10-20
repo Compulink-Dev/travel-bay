@@ -3,6 +3,7 @@ import { currentUser, clerkClient } from '@clerk/nextjs/server';
 import connectDB from '@/lib/database';
 import Booking from '@/models/Booking';
 import BookingActivity from '@/models/BookingActivity';
+import { getSocketIO } from '@/lib/socket';
 
 export async function GET(
   request: NextRequest,
@@ -47,7 +48,6 @@ export async function PUT(
   try {
     await connectDB();
     
-    // Use currentUser instead of getAuth for App Router
     const user = await currentUser();
     
     if (!user) {
@@ -69,6 +69,25 @@ export async function PUT(
 
     const booking = await Booking.findByIdAndUpdate(id, body, { new: true, runValidators: true });
     await BookingActivity.create({ bookingId: booking._id, userId: user.id, action: 'update', details: { body } });
+
+    // Emit socket event for booking update
+    try {
+      const io = getSocketIO();
+      io.emit('booking-updated', booking);
+      io.to(`booking:${id}`).emit('booking-updated', booking);
+      io.to(`user:${existing.userId}`).emit('booking-updated', booking);
+
+      // Notify all approved editors
+      if (existing.approvedEditors) {
+        existing.approvedEditors.forEach((editorId: string) => {
+          io.to(`user:${editorId}`).emit('booking-updated', booking);
+        });
+      }
+    } catch (socketError) {
+      console.log('Socket.IO not available, continuing without real-time update : ', socketError);
+      console.log('Socket.IO not available, continuing without real-time update');
+    }
+
     return NextResponse.json(booking);
   } catch (error) {
     console.error('Failed to update booking:', error);
@@ -86,7 +105,6 @@ export async function DELETE(
   try {
     await connectDB();
     
-    // Use currentUser instead of getAuth for App Router
     const user = await currentUser();
     
     if (!user) {
@@ -104,6 +122,16 @@ export async function DELETE(
     }
 
     await BookingActivity.create({ bookingId: booking._id, userId: user.id, action: 'delete' });
+
+    // Emit socket event for booking deletion
+    try {
+      const io = getSocketIO();
+      io.emit('booking-deleted', id);
+      io.to(`user:${user.id}`).emit('booking-deleted', id);
+    } catch (socketError) {
+            console.log('Socket.IO not available, continuing without real-time update : ', socketError);
+      console.log('Socket.IO not available, continuing without real-time update');
+    }
 
     return NextResponse.json({ message: 'Booking deleted successfully' });
   } catch (error) {

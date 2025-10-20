@@ -5,6 +5,7 @@ import BookingEditRequest from '@/models/BookingEditRequest';
 import Booking from '@/models/Booking';
 import BookingActivity from '@/models/BookingActivity';
 import Notification from '@/models/Notifications';
+import { getSocketIO } from '@/lib/socket';
 
 export async function PUT(request: NextRequest, { params }: { params: Promise<{ requestId: string }> }) {
   await connectDB();
@@ -22,7 +23,7 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
   await req.save();
 
   // Create notification for requester
-  await Notification.create({
+  const notification = await Notification.create({
     userId: req.requesterId,
     type: action === 'approved' ? 'edit_approved' : 'edit_rejected',
     title: action === 'approved' ? 'Edit Request Approved' : 'Edit Request Rejected',
@@ -41,6 +42,18 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       action: 'approve_edit', 
       details: { requesterId: req.requesterId } 
     });
+
+    // Emit socket event for permission granted
+    try {
+      const io = getSocketIO();
+      io.to(`user:${req.requesterId}`).emit('edit-permission-granted', {
+        bookingId: req.bookingId,
+        notification
+      });
+    } catch (socketError) {
+            console.log('Socket.IO not available, continuing without real-time update : ', socketError);
+      console.log('Socket.IO not available, continuing without real-time update');
+    }
   } else {
     await BookingActivity.create({ 
       bookingId: req.bookingId, 
@@ -48,6 +61,15 @@ export async function PUT(request: NextRequest, { params }: { params: Promise<{ 
       action: 'reject_edit', 
       details: { requesterId: req.requesterId } 
     });
+  }
+
+  // Emit socket event for new notification
+  try {
+    const io = getSocketIO();
+    io.to(`user:${req.requesterId}`).emit('new-notification', notification);
+  } catch (socketError) {
+          console.log('Socket.IO not available, continuing without real-time update : ', socketError);
+    console.log('Socket.IO not available, continuing without real-time notification');
   }
 
   return NextResponse.json(req);
