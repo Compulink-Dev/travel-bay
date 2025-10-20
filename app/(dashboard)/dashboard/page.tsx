@@ -179,23 +179,26 @@ export default function Dashboard() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <h1 className="text-3xl font-bold">Travel Bay Dashboard</h1>
-          {isConnected ? (
-            <div
-              className="w-3 h-3 bg-green-500 rounded-full"
-              title="Real-time connected"
-            />
-          ) : (
-            <div
-              className="w-3 h-3 bg-yellow-500 rounded-full"
-              title="Real-time disconnected"
-            />
-          )}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold">Travel Bay Dashboard</h1>
+            {isConnected ? (
+              <div
+                className="w-3 h-3 bg-green-500 rounded-full"
+                title="Real-time connected"
+              />
+            ) : (
+              <div
+                className="w-3 h-3 bg-yellow-500 rounded-full"
+                title="Real-time disconnected"
+              />
+            )}
+          </div>
+          <p className="text-muted-foreground">
+            Welcome back, {user?.firstName || user?.username}!
+          </p>
         </div>
-        <p className="text-muted-foreground">
-          Welcome back, {user?.firstName || user?.username}!
-        </p>
+
         <Dialog>
           <DialogTrigger asChild>
             <Button>New Booking</Button>
