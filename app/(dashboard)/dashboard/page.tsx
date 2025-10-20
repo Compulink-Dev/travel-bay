@@ -14,6 +14,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function Dashboard() {
   const { user, isLoaded } = useUser();
@@ -26,6 +33,18 @@ export default function Dashboard() {
       fetchBookings();
     }
   }, [isLoaded]);
+
+  useEffect(() => {
+    const handleBookingsUpdate = () => {
+      fetchBookings();
+    };
+
+    window.addEventListener("bookingsUpdated", handleBookingsUpdate);
+
+    return () => {
+      window.removeEventListener("bookingsUpdated", handleBookingsUpdate);
+    };
+  }, []);
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -79,9 +98,17 @@ export default function Dashboard() {
             Welcome back, {user?.firstName || user?.username}!
           </p>
         </div>
-        <Button onClick={() => setShowForm(!showForm)}>
-          {showForm ? "View Bookings" : "New Booking"}
-        </Button>
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button>New Booking</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>New Booking</DialogTitle>
+            </DialogHeader>
+            <BookingForm onSuccess={() => {}} />
+          </DialogContent>
+        </Dialog>
       </div>
 
       {showForm ? (

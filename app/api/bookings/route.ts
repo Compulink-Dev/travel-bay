@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { currentUser, clerkClient } from '@clerk/nextjs/server';
 import connectDB from '@/lib/database';
 import Booking from '@/models/Booking';
+import BookingActivity from '@/models/BookingActivity';
 
 export async function GET(request: NextRequest) {
   try {
@@ -32,9 +33,14 @@ export async function GET(request: NextRequest) {
         const client = await clerkClient();
         const list = await client.users.getUserList({ userId: userIds });
         usersById = Object.fromEntries(
-          list.data.map((u: any) => [u.id, { username: u.username || undefined, firstName: (u.firstName || undefined) as string | undefined, lastName: (u.lastName || undefined) as string | undefined }])
+          list.data.map((u) => {
+            const userAny = u as unknown as { id: string; username?: string; firstName?: string | null; lastName?: string | null };
+            return [userAny.id, { username: userAny.username || undefined, firstName: (userAny.firstName || undefined) as string | undefined, lastName: (userAny.lastName || undefined) as string | undefined }];
+          })
         );
       } catch (e) {
+        console.log('Error is from : ', e);
+        
         // Ignore enrichment failures
         usersById = {};
       }
@@ -79,6 +85,8 @@ export async function POST(request: NextRequest) {
       ...body,
       userId: user.id,
     });
+
+    await BookingActivity.create({ bookingId: booking._id, userId: user.id, action: 'create', details: { body } });
 
     return NextResponse.json(booking, { status: 201 });
   } catch (error) {

@@ -8,7 +8,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
-  const item = await Lead.findById(id);
+  const item = await Lead.findOne({ _id: id, userId: user.id });
   if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 });
   return NextResponse.json(item);
 }

@@ -8,7 +8,7 @@ export async function GET() {
     await connectDB();
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    const leads = await Lead.find({}).sort({ createdAt: -1 });
+    const leads = await Lead.find({ userId: user.id }).sort({ createdAt: -1 });
     return NextResponse.json(leads);
   } catch {
     return NextResponse.json({ error: 'Failed to fetch leads' }, { status: 500 });

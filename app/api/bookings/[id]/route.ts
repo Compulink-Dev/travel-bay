@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { currentUser, clerkClient } from '@clerk/nextjs/server';
 import connectDB from '@/lib/database';
 import Booking from '@/models/Booking';
+import BookingActivity from '@/models/BookingActivity';
 
 export async function GET(
   request: NextRequest,
@@ -25,7 +26,8 @@ export async function GET(
     try {
       const client = await clerkClient();
       const u = await client.users.getUser(booking.userId as string);
-      creatorName = (u as any).username || [u.firstName, u.lastName].filter(Boolean).join(' ') || 'Unknown';
+      const userAny = u as unknown as { username?: string; firstName?: string | null; lastName?: string | null };
+      creatorName = userAny.username || [userAny.firstName, userAny.lastName].filter(Boolean).join(' ') || 'Unknown';
     } catch {}
 
     return NextResponse.json({ ...booking, creatorName });
@@ -54,16 +56,19 @@ export async function PUT(
 
     const body = await request.json();
     const { id } = await params;
-    const booking = await Booking.findOneAndUpdate(
-      { _id: id, userId: user.id },
-      body,
-      { new: true, runValidators: true }
-    );
 
-    if (!booking) {
+    const existing = await Booking.findById(id);
+    if (!existing) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
 
+    const canEdit = existing.userId === user.id || (existing.approvedEditors || []).includes(user.id);
+    if (!canEdit) {
+      return NextResponse.json({ error: 'Forbidden - approval required', needsApproval: true }, { status: 403 });
+    }
+
+    const booking = await Booking.findByIdAndUpdate(id, body, { new: true, runValidators: true });
+    await BookingActivity.create({ bookingId: booking._id, userId: user.id, action: 'update', details: { body } });
     return NextResponse.json(booking);
   } catch (error) {
     console.error('Failed to update booking:', error);
@@ -97,6 +102,8 @@ export async function DELETE(
     if (!booking) {
       return NextResponse.json({ error: 'Booking not found' }, { status: 404 });
     }
+
+    await BookingActivity.create({ bookingId: booking._id, userId: user.id, action: 'delete' });
 
     return NextResponse.json({ message: 'Booking deleted successfully' });
   } catch (error) {

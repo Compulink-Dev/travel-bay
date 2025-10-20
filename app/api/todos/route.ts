@@ -3,15 +3,16 @@ import { currentUser } from '@clerk/nextjs/server';
 import connectDB from '@/lib/database';
 import Todo from '@/models/Todo';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     await connectDB();
     const user = await currentUser();
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-    const todos = await Todo.find({}).sort({ createdAt: -1 });
+    const todos = await Todo.find({ userId: user.id }).sort({ createdAt: -1 });
     return NextResponse.json(todos);
   } catch (e) {
+    console.log('Todo error :',e);
     return NextResponse.json({ error: 'Failed to fetch todos' }, { status: 500 });
   }
 }
@@ -28,6 +29,7 @@ export async function POST(request: NextRequest) {
     const todo = await Todo.create({ ...body, userId: user.id });
     return NextResponse.json(todo, { status: 201 });
   } catch (e) {
+    console.log('Todo error :',e);
     return NextResponse.json({ error: 'Failed to create todo' }, { status: 500 });
   }
 }
