@@ -5,20 +5,6 @@ import { useBookingStore } from "@/store/booking-store";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -35,6 +21,16 @@ import {
   UserCheck,
   UserX,
 } from "lucide-react";
+import { DataTable } from "@/components/DataTable";
+import { ColumnDef } from "@tanstack/react-table";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface BookingListProps {
   type?: "hotel" | "flight" | "package";
@@ -190,6 +186,150 @@ export function BookingList({ type }: BookingListProps) {
     }
   };
 
+  const columns: ColumnDef<Booking>[] = [
+    {
+      accessorKey: "customerName",
+      header: "Customer",
+      cell: ({ row }) => (
+        <div className="font-medium">{row.getValue("customerName")}</div>
+      ),
+    },
+    {
+      accessorKey: "customerEmail",
+      header: "Contact",
+      cell: ({ row }) => {
+        const booking = row.original;
+        return (
+          <div>
+            <div className="text-sm">{booking.customerEmail}</div>
+            <div className="text-xs text-muted-foreground">
+              {booking.customerPhone}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "type",
+      header: "Type",
+      cell: ({ row }) => (
+        <div className="capitalize">{row.getValue("type")}</div>
+      ),
+    },
+    {
+      id: "details",
+      header: "Details",
+      cell: ({ row }) => {
+        const booking = row.original;
+        return (
+          <div>
+            {booking.type === "hotel" && booking.hotelName}
+            {booking.type === "flight" && booking.flightNumber}
+            {booking.type === "package" && booking.packageName}
+          </div>
+        );
+      },
+    },
+    {
+      accessorKey: "status",
+      header: "Status",
+      cell: ({ row }) => {
+        const status = row.getValue("status") as string;
+        return (
+          <Badge variant="outline" className={getStatusColor(status)}>
+            {status}
+          </Badge>
+        );
+      },
+    },
+    {
+      accessorKey: "paymentStatus",
+      header: "Payment",
+      cell: ({ row }) => {
+        const paymentStatus = row.getValue("paymentStatus") as string;
+        return (
+          <Badge
+            variant="outline"
+            className={getPaymentStatusColor(paymentStatus)}
+          >
+            {paymentStatus}
+          </Badge>
+        );
+      },
+    },
+    {
+      accessorKey: "totalAmount",
+      header: "Amount",
+      cell: ({ row }) => {
+        const amount = parseFloat(row.getValue("totalAmount"));
+        const formatted = new Intl.NumberFormat("en-US", {
+          style: "currency",
+          currency: "USD",
+        }).format(amount);
+        return <div className="font-medium">{formatted}</div>;
+      },
+    },
+    {
+      id: "access",
+      header: "Access",
+      cell: ({ row }) => {
+        const booking = row.original;
+        return canEditBooking(booking) ? (
+          <UserCheck className="h-4 w-4 text-green-600" />
+        ) : (
+          <UserX className="h-4 w-4 text-gray-400" />
+        );
+      },
+    },
+    {
+      accessorKey: "createdAt",
+      header: "Date",
+      cell: ({ row }) => formatDate(row.getValue("createdAt")),
+    },
+    {
+      id: "actions",
+      cell: ({ row }) => {
+        const booking = row.original;
+
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" className="h-8 w-8 p-0">
+                <span className="sr-only">Open menu</span>
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+              <DropdownMenuItem
+                onClick={() => {
+                  setSelectedId(booking._id);
+                  setViewOpen(true);
+                }}
+              >
+                <Eye className="h-4 w-4 mr-2" /> View
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleEditClick(booking._id)}>
+                <Edit className="h-4 w-4 mr-2" /> Edit
+              </DropdownMenuItem>
+              {booking.userId === user?.id && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    className="text-red-600"
+                    onClick={() => handleDelete(booking._id)}
+                  >
+                    <Trash2 className="h-4 w-4 mr-2" /> Delete
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      },
+    },
+  ];
+
   if (filteredBookings.length === 0) {
     return <p className="text-muted-foreground">No bookings found.</p>;
   }
@@ -200,100 +340,12 @@ export function BookingList({ type }: BookingListProps) {
 
   return (
     <>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Customer</TableHead>
-            <TableHead>Contact</TableHead>
-            <TableHead>Type</TableHead>
-            <TableHead>Details</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Payment</TableHead>
-            <TableHead>Amount</TableHead>
-            <TableHead>Access</TableHead>
-            <TableHead>Date</TableHead>
-            <TableHead className="text-right">Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {filteredBookings.map((booking) => (
-            <TableRow key={booking._id}>
-              <TableCell className="font-medium">
-                {booking.customerName}
-              </TableCell>
-              <TableCell>
-                <div className="text-sm">{booking.customerEmail}</div>
-                <div className="text-xs text-muted-foreground">
-                  {booking.customerPhone}
-                </div>
-              </TableCell>
-              <TableCell className="capitalize">{booking.type}</TableCell>
-              <TableCell>
-                {booking.type === "hotel" && booking.hotelName}
-                {booking.type === "flight" && booking.flightNumber}
-                {booking.type === "package" && booking.packageName}
-              </TableCell>
-              <TableCell>
-                <Badge
-                  variant="outline"
-                  className={getStatusColor(booking.status)}
-                >
-                  {booking.status}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <Badge
-                  variant="outline"
-                  className={getPaymentStatusColor(booking.paymentStatus)}
-                >
-                  {booking.paymentStatus}
-                </Badge>
-              </TableCell>
-              <TableCell>${booking.totalAmount}</TableCell>
-              <TableCell>
-                {canEditBooking(booking) ? (
-                  <UserCheck className="h-4 w-4 text-green-600" />
-                ) : (
-                  <UserX className="h-4 w-4 text-gray-400" />
-                )}
-              </TableCell>
-              <TableCell>{formatDate(booking.createdAt)}</TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem
-                      onClick={() => {
-                        setSelectedId(booking._id);
-                        setViewOpen(true);
-                      }}
-                    >
-                      <Eye className="h-4 w-4 mr-2" /> View
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleEditClick(booking._id)}
-                    >
-                      <Edit className="h-4 w-4 mr-2" /> Edit
-                    </DropdownMenuItem>
-                    {booking.userId === user?.id && (
-                      <DropdownMenuItem
-                        className="text-red-600"
-                        onClick={() => handleDelete(booking._id)}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" /> Delete
-                      </DropdownMenuItem>
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <DataTable
+        columns={columns}
+        data={filteredBookings}
+        searchKey="customerName"
+        searchPlaceholder="Filter bookings..."
+      />
 
       {/* View Dialog */}
       <Dialog
