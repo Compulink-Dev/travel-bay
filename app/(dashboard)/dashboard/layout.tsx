@@ -1,10 +1,12 @@
 import React from "react";
+import { DashboardSidebar } from "../_components/Sidebar";
+import { DashboardHeader } from "../_components/Header";
 
 function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div>
-      <main className="">{children}</main>
-    </div>
+    <DashboardSidebar>
+      <DashboardHeader>{children}</DashboardHeader>
+    </DashboardSidebar>
   );
 }
 
