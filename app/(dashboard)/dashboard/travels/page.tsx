@@ -199,7 +199,7 @@ export default function TravelsPage() {
           }}
         >
           <DialogTrigger asChild>
-            <Button>New Provider</Button>
+            <Button className="button">New Provider</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -249,7 +249,9 @@ export default function TravelsPage() {
                 <Button variant="secondary" onClick={() => setOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={submit}>{editing ? "Save" : "Create"}</Button>
+                <Button className="button" onClick={submit}>
+                  {editing ? "Save" : "Create"}
+                </Button>
               </div>
             </div>
           </DialogContent>

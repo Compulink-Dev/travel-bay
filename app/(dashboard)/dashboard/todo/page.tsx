@@ -196,7 +196,7 @@ export default function TodoPage() {
           }}
         >
           <DialogTrigger asChild>
-            <Button>New Task</Button>
+            <Button className="button">New Task</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -239,7 +239,9 @@ export default function TodoPage() {
                 <Button variant="secondary" onClick={() => setOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={submit}>{editing ? "Save" : "Create"}</Button>
+                <Button className="button" onClick={submit}>
+                  {editing ? "Save" : "Create"}
+                </Button>
               </div>
             </div>
           </DialogContent>

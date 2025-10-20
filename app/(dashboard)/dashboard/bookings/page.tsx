@@ -6,7 +6,13 @@ import { useBookingStore } from "@/store/booking-store";
 import { Button } from "@/components/ui/button";
 // import Link from "next/link";
 import { BookingList } from "@/components/BookingList";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { BookingForm } from "@/components/BookingForm";
 
 export default function BookingsPage() {
@@ -36,18 +42,21 @@ export default function BookingsPage() {
         <h1 className="text-xl font-semibold">Bookings</h1>
         <Dialog>
           <DialogTrigger asChild>
-            <Button>New Booking</Button>
+            <Button className="button">New Booking</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>New Booking</DialogTitle>
             </DialogHeader>
-            <BookingForm onSuccess={() => {}}
-            />
+            <BookingForm onSuccess={() => {}} />
           </DialogContent>
         </Dialog>
       </div>
-      {isLoading ? <p className="text-muted-foreground">Loading...</p> : <BookingList />}
+      {isLoading ? (
+        <p className="text-muted-foreground">Loading...</p>
+      ) : (
+        <BookingList />
+      )}
     </div>
   );
 }

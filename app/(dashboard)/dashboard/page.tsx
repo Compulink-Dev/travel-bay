@@ -201,7 +201,7 @@ export default function Dashboard() {
 
         <Dialog>
           <DialogTrigger asChild>
-            <Button>New Booking</Button>
+            <Button className="button">New Booking</Button>
           </DialogTrigger>
           <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>

@@ -145,7 +145,7 @@ export default function CustomersPage() {
           }}
         >
           <DialogTrigger asChild>
-            <Button>New Customer</Button>
+            <Button className="button">New Customer</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -179,7 +179,9 @@ export default function CustomersPage() {
                 <Button variant="secondary" onClick={() => setOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={submit}>{editing ? "Save" : "Create"}</Button>
+                <Button className="button" onClick={submit}>
+                  {editing ? "Save" : "Create"}
+                </Button>
               </div>
             </div>
           </DialogContent>

@@ -909,7 +909,11 @@ export function BookingForm({
 
           {/* Submit Button */}
           <div className="sticky bottom-0 bg-background pt-4 pb-2 border-t">
-            <Button type="submit" disabled={isLoading} className="w-full">
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full button"
+            >
               {isLoading
                 ? method === "POST"
                   ? "Creating..."

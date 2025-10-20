@@ -199,7 +199,7 @@ export default function HotelsPage() {
           }}
         >
           <DialogTrigger asChild>
-            <Button>New Hotel</Button>
+            <Button className="button">New Hotel</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -247,7 +247,9 @@ export default function HotelsPage() {
                 <Button variant="secondary" onClick={() => setOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={submit}>{editing ? "Save" : "Create"}</Button>
+                <Button className="button" onClick={submit}>
+                  {editing ? "Save" : "Create"}
+                </Button>
               </div>
             </div>
           </DialogContent>

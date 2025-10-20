@@ -192,7 +192,7 @@ export default function LeadsPage() {
           }}
         >
           <DialogTrigger asChild>
-            <Button>New Lead</Button>
+            <Button className="button">New Lead</Button>
           </DialogTrigger>
           <DialogContent>
             <DialogHeader>
@@ -233,7 +233,9 @@ export default function LeadsPage() {
                 <Button variant="secondary" onClick={() => setOpen(false)}>
                   Cancel
                 </Button>
-                <Button onClick={submit}>{editing ? "Save" : "Create"}</Button>
+                <Button className="button" onClick={submit}>
+                  {editing ? "Save" : "Create"}
+                </Button>
               </div>
             </div>
           </DialogContent>

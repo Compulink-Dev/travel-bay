@@ -120,3 +120,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+
+.button {
+  @apply bg-blue-900 hover:bg-blue-800
+}
