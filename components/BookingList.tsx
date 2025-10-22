@@ -210,6 +210,14 @@ export function BookingList({ type }: BookingListProps) {
       },
     },
     {
+      accessorKey: "creatorName",
+      header: "Created By",
+      cell: ({ row }) => {
+        const creatorName = row.getValue("creatorName") as string;
+        return <div className="text-sm capitalize">{creatorName || "—"}</div>;
+      },
+    },
+    {
       accessorKey: "type",
       header: "Type",
       cell: ({ row }) => (
@@ -344,7 +352,7 @@ export function BookingList({ type }: BookingListProps) {
         columns={columns}
         data={filteredBookings}
         searchKey="customerName"
-        searchPlaceholder="Filter bookings..."
+        searchPlaceholder="Filter by customer..."
       />
 
       {/* View Dialog */}
@@ -361,6 +369,17 @@ export function BookingList({ type }: BookingListProps) {
           </DialogHeader>
           {selected ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <div className="font-medium">Created By</div>
+                <div className="capitalize">{selected.creatorName || "—"}</div>
+              </div>
+              <div>
+                <div className="font-medium">Customer</div>
+                <div>{selected.customerName}</div>
+                <div className="text-muted-foreground">
+                  {selected.customerEmail} • {selected.customerPhone}
+                </div>
+              </div>
               <div>
                 <div className="font-medium">Destinations</div>
                 <div>{(selected.destinations || []).join(", ") || "—"}</div>
@@ -396,13 +415,6 @@ export function BookingList({ type }: BookingListProps) {
               <div>
                 <div className="font-medium">Other Services</div>
                 <div>{selected.otherServices || "—"}</div>
-              </div>
-              <div>
-                <div className="font-medium">Customer</div>
-                <div>{selected.customerName}</div>
-                <div className="text-muted-foreground">
-                  {selected.customerEmail} • {selected.customerPhone}
-                </div>
               </div>
               <div>
                 <div className="font-medium">Type</div>
